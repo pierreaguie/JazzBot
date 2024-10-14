@@ -1,5 +1,5 @@
 # JazzBot
-Project by M. Basse, C. Soto, H. Duprieu, L. Stöckel, P. Aguié, conducted as part of the 2nd year curriculum, supervised by Jean-Pierre Briot (CNRS) and Gaëtan Hadjeres (Sony AI).
+Project by M. Basse, C. Soto, H. Duprieu, L. Stöckel, P. Aguié, conducted as part of the 2nd year curriculum of École polytechnique, supervised by Jean-Pierre Briot (CNRS) and Gaëtan Hadjeres (Sony AI).
 
 This repository contains the code used to build and train JazzBot, a transformer model used for jazz solo generation in MIDI format. The model's aim is to generate sequences of notes following a starting sequence given as an input.
 

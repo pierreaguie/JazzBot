@@ -3,7 +3,6 @@ import torch
 import pytorch_lightning as pl
 import math
 
-from JazzBot.positional_encoding import *
 from JazzBot.config import *
 from JazzBot.vocab import itos_vocab
 
