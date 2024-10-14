@@ -1,9 +1,11 @@
 import torch.nn as nn
+import torch
+import pytorch_lightning as pl
 import math
+
 from JazzBot.positional_encoding import *
 from JazzBot.config import *
 from JazzBot.vocab import itos_vocab
-import pytorch_lightning as pl
 
 
 class JazzBot(pl.LightningModule):
@@ -116,3 +118,29 @@ class JazzBot(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         self.log("ptl/val_loss", avg_loss)
+
+
+
+class PositionalEncoding(pl.LightningModule):
+    def __init__(self, dim_model, dropout_p, max_len):
+        super().__init__()       
+
+        # Info
+        self.dropout = nn.Dropout(dropout_p)
+        
+        pos_encoding = torch.zeros(max_len, dim_model)
+        positions_list = torch.arange(0, max_len, dtype=torch.float).view(-1, 1) # 0, 1, 2, 3, 4, 5
+        division_term = torch.exp(torch.arange(0, dim_model, 2).float() * (-math.log(10000.0)) / dim_model) # 1000^(2i/dim_model)
+        
+        # PE(pos, 2i) = sin(pos/1000^(2i/dim_model))
+        pos_encoding[:, 0::2] = torch.sin(positions_list * division_term)
+        # PE(pos, 2i + 1) = cos(pos/1000^(2i/dim_model))
+        pos_encoding[:, 1::2] = torch.cos(positions_list * division_term)
+        
+        # Saving buffer (same as parameter without gradients needed)
+        pos_encoding = pos_encoding.unsqueeze(0).transpose(0, 1)
+        self.register_buffer("pos_encoding",pos_encoding)
+        
+    def forward(self, token_embedding: torch.tensor) -> torch.tensor:
+        # Residual connection + pos encoding
+        return self.dropout(token_embedding + self.pos_encoding[:token_embedding.size(0), :])
