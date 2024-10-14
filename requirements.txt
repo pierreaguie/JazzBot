@@ -1,0 +1,6 @@
+numpy
+torch
+pytorch_lightning
+scipy
+matplotlib
+music21

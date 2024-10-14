@@ -2,18 +2,17 @@ from JazzBot.vocab import *
 from music21 import *
 import os
 
-
-
 def noteToToken(n,l):
     '''
-    parameters : note, last_time
-    NB : A terme il faudra arrondir plutot que de prendre la partie entiere
+    Converts the note n to tokens (note, duration, time shift, velocity), using the time of the last note l to compute the time shift
     '''
     note_pitch = n.pitch.midi
     last_time = l
     note_duration = int(n.duration.quarterLength*4)
     note_offset = int(n.offset*4 - last_time)
+    last_time = n.offset*4
     note_velocity = n.volume.velocity
+
     return [NOTE_TOKS[note_pitch],
             DUR_TOKS[note_duration],
             TIM_TOKS[note_offset],
@@ -21,8 +20,8 @@ def noteToToken(n,l):
 
 def midiToTokens(folder_path,f):
     '''
-    parameter : folder_path,f = name of the midi file
-    read a midi file and extract the notes, no token start or end
+    Reads a MIDI file f located in folder_path, and yields the sequence of tokens corresponding to the notes in the file
+    (does not add the start of sequence and end of sequence tokens)
     '''
     tokens = []
     midi_file = midi.MidiFile()
@@ -33,7 +32,6 @@ def midiToTokens(folder_path,f):
     # Iterate over the notes in the stream and extract the note information
     last_time = 0
     for note in stream.flat.notes:
-        last_time = note.offset*4
         if note.isNote:
             tokens+=noteToToken(note,last_time)
 
@@ -43,30 +41,30 @@ def midiToTokens(folder_path,f):
 
     return tokens
 
-def tokensToPieces(t,n):
+def tokensToPieces(t,N):
     '''
-    parameters : t= tokens (4*(nb_tok))  
-    cut the list of tokens into pieces of length n, add PAD if necessary
+    parameters : t = tokens (4*(nb_tok))  
+    cut the list of tokens into pieces of length N, add PAD if necessary
     '''
     pieces = []
     nb_tok = (len(t))//4
-    for i in range(nb_tok-n+1):
-        pieces.append(t[4*i:4*i+n])
+    for i in range(nb_tok-N+1):
+        pieces.append(t[4*i:4*i+N])
     return pieces
 
 def pieceToInputTarget(p):
     '''
-    return a couple of vectors (input, target) with input = SOS + piece - last_note; target = piece 
+    return a couple of vectors (input, target) with input = SOS + piece; target = piece + EOS
     '''
-    input_p = custom_vocab(BOS_TOK)
+    input_p = cv_sos()
     target_p = []
-    for i in range(len(p)//4-1):
+    for i in range(len(p)//4):
         input_p+= custom_vocab(p[4*i:4*(i+1)])
         target_p += custom_vocab(p[4*i:4*(i+1)])
-    target_p += custom_vocab(p[4*(len(p)//4-1):4*(len(p)//4)])
+    target_p += cv_eos()
     return(input_p,target_p)
 
-def folderToVectInputTarget(folder_path,N):
+def folderToVectInputTarget(folder_path, N):
     '''
     parameters : folder_path, N = number of notes in pieces 
     '''
@@ -74,11 +72,26 @@ def folderToVectInputTarget(folder_path,N):
     vectTarget = []
     file_names = os.listdir(folder_path)
     for f in file_names:
-        print(f)
         tokens = midiToTokens(folder_path,f)
         pieces = tokensToPieces(tokens,4*N)
         for p in pieces:
             input,target = pieceToInputTarget(p)
             vectInput.append(input)
             vectTarget.append(target)
+    return vectInput,vectTarget
+
+def csvToVectInputTarget(file_path, N):
+    '''
+    parameters : file_path, N = number of notes in pieces 
+    '''
+    vectInput = []
+    vectTarget = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            tokens = line.split(',')
+            pieces = tokensToPieces(tokens, N)
+            for p in pieces:
+                input,target = pieceToInputTarget(p)
+                vectInput.append(input)
+                vectTarget.append(target)
     return vectInput,vectTarget
